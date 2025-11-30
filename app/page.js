@@ -352,7 +352,7 @@ export default function Home() {
                 className={cn(
                   "cursor-pointer transition-all hover:shadow-md",
                   selectedPrayers[prayer.name] &&
-                    "border-primary bg-accent shadow-sm"
+                    "border-primary bg-accent shadow-md"
                 )}
                 onClick={() => handlePrayerSelect(prayer.name)}
               >
