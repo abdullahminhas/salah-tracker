@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -12,6 +13,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -75,6 +78,49 @@ function CircularCheckbox({ className, ...props }) {
   );
 }
 
+// Circular progress component
+function CircularProgress({ value, size = 60, strokeWidth = 6, className }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (value / 100) * circumference;
+
+  return (
+    <div
+      className={cn(
+        "relative inline-flex items-center justify-center",
+        className
+      )}
+    >
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="none"
+          className="text-muted opacity-20"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="text-primary transition-all duration-300"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-sm font-semibold text-foreground">{value}%</span>
+      </div>
+    </div>
+  );
+}
+
 // Define sub-prayers for each prayer based on the chart
 const prayerSubPrayers = {
   Tahajjud: [],
@@ -86,6 +132,8 @@ const prayerSubPrayers = {
 };
 
 export default function Home() {
+  const router = useRouter();
+
   const [selectedPrayers, setSelectedPrayers] = useState({
     Tahajjud: false,
     Fajr: false,
@@ -220,6 +268,194 @@ export default function Home() {
     (prayer) => selectedPrayers[prayer]
   ).length;
   const progress = selectedMainPrayersCount * 20;
+
+  // Calculate completion percentage for each prayer
+  const getPrayerCompletion = (prayerName) => {
+    const subPrayersList = prayerSubPrayers[prayerName];
+    if (subPrayersList.length === 0) return 0;
+
+    const checkedCount = Object.values(subPrayers[prayerName] || {}).filter(
+      (checked) => checked
+    ).length;
+    return Math.round((checkedCount / subPrayersList.length) * 100);
+  };
+
+  // Calculate total completion across all prayers and sub-prayers
+  const getTotalCompletion = () => {
+    let totalSubPrayers = 0;
+    let totalChecked = 0;
+
+    mainPrayers.forEach((prayerName) => {
+      const subPrayersList = prayerSubPrayers[prayerName];
+      totalSubPrayers += subPrayersList.length;
+
+      const checkedCount = Object.values(subPrayers[prayerName] || {}).filter(
+        (checked) => checked
+      ).length;
+      totalChecked += checkedCount;
+    });
+
+    if (totalSubPrayers === 0) return 0;
+    return Math.round((totalChecked / totalSubPrayers) * 100);
+  };
+
+  // Check if a prayer is fully completed (all sub-prayers checked)
+  const isPrayerFullyCompleted = (prayerName) => {
+    const subPrayersList = prayerSubPrayers[prayerName];
+    if (subPrayersList.length === 0) return false;
+
+    const allChecked = Object.values(subPrayers[prayerName] || {}).every(
+      (checked) => checked
+    );
+    return allChecked;
+  };
+
+  // Get daily completion for the last 7 days (using same formula as main progress bar)
+  const last7Days = useMemo(() => {
+    const days = [];
+    const today = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+
+      // For today, use the same formula as main progress bar
+      // Count selected prayers (radio button selected), each prayer = 20%
+      let selectedCount = 0;
+      let completion = 0;
+
+      if (i === 0) {
+        // Today - count selected prayers (same as main progress bar)
+        selectedCount = mainPrayers.filter(
+          (prayer) => selectedPrayers[prayer]
+        ).length;
+        completion = selectedCount * 20; // Same formula: each prayer = 20%
+      } else {
+        // Past days - use deterministic value based on date string
+        // In a real app, this would come from localStorage/API
+        // Using a simple hash of the date string for consistency
+        const dateHash = dateStr
+          .split("-")
+          .reduce((acc, val) => acc + parseInt(val), 0);
+        selectedCount = dateHash % 6; // Deterministic: 0-5 prayers
+        completion = selectedCount * 20; // Same formula: each prayer = 20%
+      }
+
+      days.push({
+        date: date,
+        dateStr: dateStr,
+        dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
+        dayNumber: date.getDate(),
+        completion: completion,
+        selectedCount: selectedCount,
+      });
+    }
+
+    return days;
+  }, [selectedPrayers]);
+
+  // Get progress for a specific date (using same formula: selected prayers * 20%)
+  const getDateProgress = (date) => {
+    // Ensure date is a Date object
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) return 0;
+
+    const dateStr = dateObj.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    if (dateStr === todayStr) {
+      // Today - use current state
+      const selectedCount = mainPrayers.filter(
+        (prayer) => selectedPrayers[prayer]
+      ).length;
+      return selectedCount * 20;
+    } else {
+      // Past/future dates - use deterministic value based on date
+      // In a real app, this would come from localStorage/API
+      const dateHash = dateStr
+        .split("-")
+        .reduce((acc, val) => acc + parseInt(val), 0);
+      const selectedCount = dateHash % 6; // Deterministic: 0-5 prayers
+      return selectedCount * 20;
+    }
+  };
+
+  // Custom DayButton component with circular progress
+  const CustomDayButton = ({ day, modifiers, className, ...props }) => {
+    // Ensure day is a Date object (react-day-picker passes day.date or day)
+    const dateObj = day instanceof Date ? day : day?.date || new Date(day);
+    if (isNaN(dateObj.getTime())) return null;
+
+    const progress = getDateProgress(dateObj);
+    const dateStr = dateObj.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isToday = dateStr === todayStr;
+    const size = 32; // Smaller size for calendar
+    const strokeWidth = 3;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (progress / 100) * circumference;
+
+    const handleClick = () => {
+      router.push(`/prayerProgress?date=${dateStr}`);
+    };
+
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        className={cn(
+          "relative flex flex-col items-center justify-center aspect-square w-full min-w-(--cell-size) gap-2 p-3 text-center text-sm font-normal leading-none cursor-pointer",
+          modifiers.selected && "bg-primary text-primary-foreground rounded-md",
+          className
+        )}
+        {...props}
+      >
+        <span
+          className={cn(
+            "text-xs font-semibold z-10 leading-tight",
+            isToday &&
+              "bg-primary text-primary-foreground rounded-full px-1.5 py-0.5"
+          )}
+        >
+          {dateObj.getDate()}
+        </span>
+        <div
+          className="relative shrink-0 mt-0.5"
+          style={{ width: size, height: size }}
+        >
+          <svg
+            width={size}
+            height={size}
+            className="transform -rotate-90 absolute inset-0"
+          >
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke="currentColor"
+              strokeWidth={strokeWidth}
+              fill="none"
+              className="opacity-20 text-muted-foreground"
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke="currentColor"
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              className="transition-all duration-300 text-primary"
+            />
+          </svg>
+        </div>
+      </button>
+    );
+  };
 
   // Find Farz checkbox key for a prayer
   const findFarzKey = (prayerName) => {
@@ -420,6 +656,94 @@ export default function Home() {
                 )}
             </div>
           ))}
+        </div>
+        <Separator className="my-8" />
+        <div className="flex flex-col gap-6">
+          <h2 className="text-2xl font-bold text-foreground">
+            Prayer Completion
+          </h2>
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
+            {mainPrayers.map((prayerName) => {
+              const completion = getPrayerCompletion(prayerName);
+              return (
+                <div
+                  key={prayerName}
+                  className="flex flex-col items-center gap-3"
+                >
+                  <CircularProgress value={completion} />
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-foreground">
+                      {prayerName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {completion}% Complete
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex flex-col items-center gap-3">
+              <CircularProgress value={getTotalCompletion()} />
+              <div className="text-center">
+                <p className="text-sm font-semibold text-foreground">Total</p>
+                <p className="text-xs text-muted-foreground">
+                  {getTotalCompletion()}% Complete
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Separator className="my-8" />
+        <div className="flex flex-col gap-6">
+          <h2 className="text-2xl font-bold text-foreground">
+            Last 7 Days Progress
+          </h2>
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-7">
+            {last7Days.map((day) => {
+              const isToday =
+                day.dateStr === new Date().toISOString().split("T")[0];
+              return (
+                <div
+                  key={day.dateStr}
+                  className="flex flex-col items-center gap-3"
+                >
+                  <CircularProgress value={day.completion} />
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-foreground">
+                      {day.dayName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {day.dayNumber}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {day.selectedCount}/5 prayers
+                    </p>
+                    {isToday && (
+                      <p className="text-xs text-primary font-medium mt-1">
+                        Today
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <Separator className="my-8" />
+        <div className="flex flex-col gap-6">
+          <h2 className="text-2xl font-bold text-foreground">
+            Current Month Progress
+          </h2>
+          <div className="w-full">
+            <Calendar
+              mode="single"
+              showOutsideDays={false}
+              components={{
+                DayButton: CustomDayButton,
+              }}
+              className="w-full rounded-md border"
+            />
+          </div>
         </div>
       </main>
     </div>
