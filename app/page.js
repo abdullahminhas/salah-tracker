@@ -10,6 +10,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
@@ -50,6 +51,27 @@ function StandaloneRadioButton({
         </div>
       )}
     </button>
+  );
+}
+
+// Circular checkbox component that matches the radio button design
+function CircularCheckbox({ className, ...props }) {
+  return (
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
+      className={cn(
+        "border-input text-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 aspect-square size-4 shrink-0 rounded-full border shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
+        className
+      )}
+      {...props}
+    >
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="relative flex items-center justify-center"
+      >
+        <CircleIcon className="fill-primary absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2" />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
   );
 }
 
@@ -286,9 +308,6 @@ export default function Home() {
       <main className="flex w-full max-w-2xl flex-col gap-8 px-4 py-16 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <label htmlFor="madhab-select" className="text-sm font-medium">
-              Madhab:
-            </label>
             <Select value={madhab} onValueChange={setMadhab}>
               <SelectTrigger id="madhab-select" className="w-[140px]">
                 <SelectValue placeholder="Select madhab" />
@@ -353,46 +372,51 @@ export default function Home() {
               </Card>
               {selectedPrayers[prayer.name] &&
                 prayerSubPrayers[prayer.name].length > 0 && (
-                  <Card className="ml-8 border-l-2 border-l-primary">
-                    <CardContent className="flex flex-col gap-4 p-6">
-                      {prayerSubPrayers[prayer.name].map((subPrayer, index) => {
-                        const subPrayerKey = `${subPrayer}-${index}`;
-                        const isFarzCheckbox = subPrayerKey.includes("Farz");
-                        const isFarzCheckedForPrayer = isFarzChecked(
-                          prayer.name
-                        );
-                        const isDisabled =
-                          !isFarzCheckbox && !isFarzCheckedForPrayer;
+                  <div className="mx-4 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {prayerSubPrayers[prayer.name].map((subPrayer, index) => {
+                      const subPrayerKey = `${subPrayer}-${index}`;
+                      const isFarzCheckbox = subPrayerKey.includes("Farz");
+                      const isFarzCheckedForPrayer = isFarzChecked(prayer.name);
+                      const isDisabled =
+                        !isFarzCheckbox && !isFarzCheckedForPrayer;
+                      const isChecked = subPrayers[prayer.name][subPrayerKey];
 
-                        return (
-                          <div
-                            key={subPrayerKey}
-                            className="flex items-center gap-3"
-                          >
-                            <Checkbox
-                              id={`${prayer.name}-${subPrayerKey}`}
-                              checked={subPrayers[prayer.name][subPrayerKey]}
-                              disabled={isDisabled}
-                              onCheckedChange={() =>
-                                toggleSubPrayer(prayer.name, subPrayerKey)
-                              }
-                            />
-                            <label
-                              htmlFor={`${prayer.name}-${subPrayerKey}`}
-                              className={cn(
-                                "text-sm font-medium leading-none",
-                                isDisabled
-                                  ? "cursor-not-allowed opacity-50"
-                                  : "cursor-pointer"
-                              )}
-                            >
+                      return (
+                        <Card
+                          key={subPrayerKey}
+                          className={cn(
+                            "cursor-pointer transition-all hover:shadow-md",
+                            isChecked && "border-primary bg-accent shadow-sm",
+                            isDisabled && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => {
+                            if (!isDisabled) {
+                              toggleSubPrayer(prayer.name, subPrayerKey);
+                            }
+                          }}
+                        >
+                          <CardHeader>
+                            <CardTitle className="text-base">
                               {subPrayer}
-                            </label>
-                          </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
+                            </CardTitle>
+                            <CardAction>
+                              <CircularCheckbox
+                                id={`${prayer.name}-${subPrayerKey}`}
+                                checked={isChecked}
+                                disabled={isDisabled}
+                                onCheckedChange={(e) => {
+                                  e.stopPropagation();
+                                  if (!isDisabled) {
+                                    toggleSubPrayer(prayer.name, subPrayerKey);
+                                  }
+                                }}
+                              />
+                            </CardAction>
+                          </CardHeader>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 )}
             </div>
           ))}
