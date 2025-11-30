@@ -391,8 +391,9 @@ export default function Home() {
     const dateStr = dateObj.toISOString().split("T")[0];
     const todayStr = new Date().toISOString().split("T")[0];
     const isToday = dateStr === todayStr;
-    const size = 32; // Smaller size for calendar
-    const strokeWidth = 3;
+    // Use fixed smaller size for mobile compatibility
+    const size = 28;
+    const strokeWidth = 2.5;
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
     const offset = circumference - (progress / 100) * circumference;
@@ -406,7 +407,7 @@ export default function Home() {
         type="button"
         onClick={handleClick}
         className={cn(
-          "relative flex flex-col items-center justify-center aspect-square w-full min-w-(--cell-size) gap-2 p-3 text-center text-sm font-normal leading-none cursor-pointer",
+          "relative flex flex-col items-center justify-center aspect-square w-full min-w-(--cell-size) gap-1.5 p-2 sm:gap-2 sm:p-3 text-center text-sm font-normal leading-none cursor-pointer",
           modifiers.selected && "bg-primary text-primary-foreground rounded-md",
           className
         )}
@@ -414,9 +415,9 @@ export default function Home() {
       >
         <span
           className={cn(
-            "text-xs font-semibold z-10 leading-tight",
+            "text-[10px] sm:text-xs font-semibold z-10 leading-tight",
             isToday &&
-              "bg-primary text-primary-foreground rounded-full px-1.5 py-0.5"
+              "bg-primary text-primary-foreground rounded-full px-1 sm:px-1.5 py-0.5"
           )}
         >
           {dateObj.getDate()}
@@ -734,15 +735,17 @@ export default function Home() {
           <h2 className="text-2xl font-bold text-foreground">
             Current Month Progress
           </h2>
-          <div className="w-full">
-            <Calendar
-              mode="single"
-              showOutsideDays={false}
-              components={{
-                DayButton: CustomDayButton,
-              }}
-              className="w-full rounded-md border"
-            />
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-fit max-w-full">
+              <Calendar
+                mode="single"
+                showOutsideDays={false}
+                components={{
+                  DayButton: CustomDayButton,
+                }}
+                className="w-full rounded-md border-0 p-0 sm:p-3 sm:border"
+              />
+            </div>
           </div>
         </div>
       </main>
