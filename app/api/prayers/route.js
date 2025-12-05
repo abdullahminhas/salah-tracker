@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Prayer from "@/models/Prayer";
-import { requireAuth, getAuthEmail } from "@/lib/auth";
+import { verifyAuth, requireAuth, getAuthEmail } from "@/lib/auth";
 
-// GET - Fetch prayers (protected - requires authentication)
+// GET - Fetch prayers (returns null if not authenticated)
 export async function GET(request) {
   try {
-    // Check authentication
-    const authError = requireAuth(request);
-    if (authError) {
-      return authError;
-    }
-
-    const email = getAuthEmail(request); // Get email from authenticated user's JWT
-    if (!email) {
+    // Check authentication - if not authenticated, return null data instead of error
+    const decoded = verifyAuth(request);
+    if (!decoded || !decoded.email) {
+      // User not authenticated - return null data gracefully
       return NextResponse.json(
-        { success: false, error: "Unable to identify user" },
-        { status: 401 }
+        { success: true, data: null, message: "User not authenticated" },
+        { status: 200 }
       );
     }
 
+    const email = decoded.email;
     await connectDB();
 
     const { searchParams } = new URL(request.url);

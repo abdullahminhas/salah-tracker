@@ -447,7 +447,12 @@ export default function Home() {
           console.log("ℹ️ No prayers found for today");
         }
       } catch (error) {
-        console.error("❌ Error fetching today's prayers:", error);
+        // Handle 401 (Unauthorized) gracefully - user not logged in
+        if (error.message && error.message.includes("401")) {
+          console.log("ℹ️ User not authenticated, skipping prayer data load");
+        } else {
+          console.error("❌ Error fetching today's prayers:", error);
+        }
       } finally {
         setPrayerDataLoading(false);
         console.log("✅ Prayer data loading complete");
