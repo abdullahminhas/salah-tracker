@@ -774,23 +774,53 @@ export default function Home() {
     return Math.round((checkedSubPrayers / totalSubPrayers) * 100);
   };
 
+  // Helper function to generate empty last 7 days data with zero progress
+  const generateEmptyLast7Days = () => {
+    const today = new Date();
+    const days = [];
+    
+    // Get last 7 days including today (6 days ago to today = 7 days)
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      
+      days.push({
+        date: date,
+        dateStr: dateStr,
+        dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
+        dayNumber: date.getDate(),
+        completion: 0,
+        selectedCount: 0,
+      });
+    }
+    
+    return days;
+  };
+
   // Fetch last 7 days data from API
   useEffect(() => {
     const fetchLast7Days = async () => {
-      // Skip if user is not authenticated
+      // If user is not authenticated, show empty last 7 days with zero progress
       if (!isAuthenticated || !user) {
-        setLast7Days([]);
+        setLast7Days(generateEmptyLast7Days());
         return;
       }
 
       setLast7DaysLoading(true);
       try {
         const data = await getLast7DaysPrayers();
-        setLast7Days(data);
+        // Ensure we have 7 days of data (with zero progress if missing)
+        if (data && data.length > 0) {
+          setLast7Days(data);
+        } else {
+          // Generate last 7 days with zero progress as fallback
+          setLast7Days(generateEmptyLast7Days());
+        }
       } catch (error) {
         console.error("Error fetching last 7 days:", error);
-        // Fallback to empty array on error
-        setLast7Days([]);
+        // Generate last 7 days with zero progress as fallback
+        setLast7Days(generateEmptyLast7Days());
       } finally {
         setLast7DaysLoading(false);
       }
