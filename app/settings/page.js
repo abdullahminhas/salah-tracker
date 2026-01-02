@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -15,32 +15,87 @@ import { Label } from "@/components/ui/label";
 export default function SettingsPage() {
   // Initialize with default values to avoid hydration mismatch
   const [madhab, setMadhab] = useState("Hanbali");
-  const [showJumma, setShowJumma] = useState(false);
+  const [showJumma, setShowJumma] = useState(null);
+  const hasLoadedFromStorage = useRef(false);
 
   // Load values from localStorage after mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedMadhab = localStorage.getItem("madhab") || "Hanbali";
-      const savedShowJumma = localStorage.getItem("showJumma") === "true";
+      const savedShowJumma = localStorage.getItem("showJumma");
+      // If localStorage has a value, use it; otherwise default to true
+      const showJummaValue =
+        savedShowJumma !== null ? savedShowJumma === "true" : true;
       setMadhab(savedMadhab);
-      setShowJumma(savedShowJumma);
+      setShowJumma(showJummaValue);
+      // Mark that we've loaded from storage
+      hasLoadedFromStorage.current = true;
     }
   }, []);
 
-  // Save madhab to localStorage
+  // Listen for changes to madhab from other tabs or components
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+
+    const handleMadhabChange = () => {
+      const savedMadhab = localStorage.getItem("madhab") || "Hanbali";
+      setMadhab(savedMadhab);
+    };
+
+    window.addEventListener("storage", handleMadhabChange);
+    // Also listen for custom event for same-tab updates
+    window.addEventListener("madhabChanged", handleMadhabChange);
+
+    return () => {
+      window.removeEventListener("storage", handleMadhabChange);
+      window.removeEventListener("madhabChanged", handleMadhabChange);
+    };
+  }, []);
+
+  // Listen for changes to showJumma from other tabs or components
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleShowJummaChange = () => {
+      const saved = localStorage.getItem("showJumma");
+      const showJummaValue = saved !== null ? saved === "true" : true;
+      setShowJumma(showJummaValue);
+    };
+
+    window.addEventListener("storage", handleShowJummaChange);
+    // Also listen for custom event for same-tab updates
+    window.addEventListener("showJummaChanged", handleShowJummaChange);
+
+    return () => {
+      window.removeEventListener("storage", handleShowJummaChange);
+      window.removeEventListener("showJummaChanged", handleShowJummaChange);
+    };
+  }, []);
+
+  // Save madhab to localStorage and dispatch event (only after initial load)
+  useEffect(() => {
+    if (typeof window !== "undefined" && hasLoadedFromStorage.current) {
       localStorage.setItem("madhab", madhab);
+      // Dispatch a custom event to notify other components in the same tab
+      window.dispatchEvent(
+        new CustomEvent("madhabChanged", {
+          detail: { key: "madhab", value: madhab },
+        })
+      );
     }
   }, [madhab]);
 
-  // Save showJumma to localStorage and dispatch event
+  // Save showJumma to localStorage and dispatch event (only after initial load)
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      hasLoadedFromStorage.current &&
+      showJumma !== null
+    ) {
       localStorage.setItem("showJumma", showJumma.toString());
-      // Dispatch a custom event to notify other components/tabs
+      // Dispatch a custom event to notify other components in the same tab
       window.dispatchEvent(
-        new CustomEvent("showJummaChange", {
+        new CustomEvent("showJummaChanged", {
           detail: { key: "showJumma", value: showJumma },
         })
       );
@@ -86,7 +141,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 id="jumma-switch"
-                checked={showJumma}
+                checked={showJumma ?? true}
                 onCheckedChange={setShowJumma}
               />
             </div>

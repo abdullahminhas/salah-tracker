@@ -2,13 +2,6 @@
 
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PrayerAccordion } from "./PrayerAccordion";
 
 export function TodaysPrayers({
@@ -32,17 +25,9 @@ export function TodaysPrayers({
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Select value={madhab} onValueChange={setMadhab}>
-            <SelectTrigger id="madhab-select" className="w-[140px]">
-              <SelectValue placeholder="Select madhab" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Hanafi">Hanafi</SelectItem>
-              <SelectItem value="Shafi">Shafi</SelectItem>
-              <SelectItem value="Maliki">Maliki</SelectItem>
-              <SelectItem value="Hanbali">Hanbali</SelectItem>
-            </SelectContent>
-          </Select>
+          <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+            <b suppressHydrationWarning>{madhab}</b> madhhab prayer times
+          </p>
         </div>
         {cityName && (
           <div className="text-sm text-muted-foreground">

@@ -1,38 +1,80 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { getMonthPrayers } from "@/lib/prayer-api";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Define main prayers
 const mainPrayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
 export default function PrayerProgressPage() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
 
-  // Get progress for a specific date (using same formula: selected prayers * 20%)
+  // Track the current month being displayed
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  // Store month data from API
+  const [monthData, setMonthData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch month data when month changes
+  useEffect(() => {
+    const fetchMonthData = async () => {
+      // Only fetch if user is authenticated
+      if (!isAuthenticated || !user) {
+        setMonthData([]);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1; // getMonth() returns 0-11, API expects 1-12
+
+        const data = await getMonthPrayers(year, month);
+        setMonthData(data || []);
+      } catch (err) {
+        console.error("Error fetching month data:", err);
+        setError(err.message);
+        setMonthData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMonthData();
+  }, [currentMonth, isAuthenticated, user]);
+
+  // Create a map for quick lookup of date progress
+  const progressMap = useMemo(() => {
+    const map = {};
+    monthData.forEach((day) => {
+      map[day.dateStr] = day.completion;
+    });
+    return map;
+  }, [monthData]);
+
+  // Get progress for a specific date from API data
   const getDateProgress = (date) => {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
     if (isNaN(dateObj.getTime())) return 0;
 
     const dateStr = dateObj.toISOString().split("T")[0];
-    const todayStr = new Date().toISOString().split("T")[0];
 
-    if (dateStr === todayStr) {
-      // Today - for now, return 0 (in real app, load from state/storage)
-      // You can pass selectedPrayers as props or load from localStorage
-      return 0;
-    } else {
-      // Past/future dates - use deterministic value based on date
-      // In a real app, this would come from localStorage/API
-      const dateHash = dateStr
-        .split("-")
-        .reduce((acc, val) => acc + parseInt(val), 0);
-      const selectedCount = dateHash % 6; // Deterministic: 0-5 prayers
-      return selectedCount * 20;
+    // Look up progress from API data
+    if (progressMap[dateStr] !== undefined) {
+      return progressMap[dateStr];
     }
+
+    // If no data found, return 0
+    return 0;
   };
 
   // Custom DayButton component with circular progress
@@ -124,10 +166,13 @@ export default function PrayerProgressPage() {
               View your prayer progress for the current month
             </p>
           </div>
-          <div className="w-full overflow-x-auto">
-            <div className="min-w-fit max-w-full">
+          <div className="w-full flex justify-center">
+            <div className="w-full max-w-fit">
               <Calendar
                 mode="single"
+                selected={undefined}
+                month={currentMonth}
+                onMonthChange={setCurrentMonth}
                 showOutsideDays={false}
                 components={{
                   DayButton: CustomDayButton,
@@ -139,6 +184,16 @@ export default function PrayerProgressPage() {
                   month: "h-auto overflow-visible",
                 }}
               />
+              {loading && (
+                <p className="text-sm text-muted-foreground text-center mt-4">
+                  Loading prayer data...
+                </p>
+              )}
+              {error && (
+                <p className="text-sm text-destructive text-center mt-4">
+                  Error loading data: {error}
+                </p>
+              )}
             </div>
           </div>
         </div>

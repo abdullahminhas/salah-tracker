@@ -19,12 +19,15 @@ export default function Home() {
   const { user, isAuthenticated } = useAuth();
 
   // Get showJumma setting from localStorage (initialize after mount to avoid hydration issues)
-  const [showJumma, setShowJumma] = useState(false);
+  const [showJumma, setShowJumma] = useState(null);
 
   // Load showJumma from localStorage after mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setShowJumma(localStorage.getItem("showJumma") === "true");
+      const saved = localStorage.getItem("showJumma");
+      // If localStorage has a value, use it; otherwise default to true
+      const showJummaValue = saved !== null ? saved === "true" : true;
+      setShowJumma(showJummaValue);
     }
   }, []);
 
@@ -32,17 +35,46 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const handleStorageChange = () => {
-      setShowJumma(localStorage.getItem("showJumma") === "true");
+    const handleShowJummaChange = () => {
+      const saved = localStorage.getItem("showJumma");
+      const showJummaValue = saved !== null ? saved === "true" : true;
+      setShowJumma(showJummaValue);
     };
 
-    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("storage", handleShowJummaChange);
     // Also listen for custom event for same-tab updates
-    window.addEventListener("showJummaChanged", handleStorageChange);
+    window.addEventListener("showJummaChanged", handleShowJummaChange);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("showJummaChanged", handleStorageChange);
+      window.removeEventListener("storage", handleShowJummaChange);
+      window.removeEventListener("showJummaChanged", handleShowJummaChange);
+    };
+  }, []);
+
+  // Load madhab from localStorage after mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMadhab = localStorage.getItem("madhab") || "Hanbali";
+      setMadhab(savedMadhab);
+    }
+  }, []);
+
+  // Listen for changes to madhab setting
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleMadhabChange = () => {
+      const savedMadhab = localStorage.getItem("madhab") || "Hanbali";
+      setMadhab(savedMadhab);
+    };
+
+    window.addEventListener("storage", handleMadhabChange);
+    // Also listen for custom event for same-tab updates
+    window.addEventListener("madhabChanged", handleMadhabChange);
+
+    return () => {
+      window.removeEventListener("storage", handleMadhabChange);
+      window.removeEventListener("madhabChanged", handleMadhabChange);
     };
   }, []);
 
@@ -316,6 +348,14 @@ export default function Home() {
     fetchCityName();
   }, [latitude, longitude]);
 
+  // Check if today is Friday (0 = Sunday, 5 = Friday)
+  // Use currentDate to ensure consistency between server and client
+  const isFriday = useMemo(() => {
+    if (!currentDate) return false;
+    const date = new Date(currentDate + "T00:00:00"); // Use currentDate string to avoid timezone issues
+    return date.getDay() === 5; // Friday
+  }, [currentDate]);
+
   // Fetch today's prayer data from database and restore state
   useEffect(() => {
     const loadTodayPrayers = async () => {
@@ -377,27 +417,33 @@ export default function Home() {
           // Restore each prayer from the database
           todayData.prayers.forEach((prayer) => {
             let prayerName = prayer.name;
+            let uiPrayerName = prayer.name; // Name to use in UI state
 
-            // Map Dhuhr/Jumma based on showJumma setting and whether it's Friday
-            const shouldShowJumma = showJumma && isFriday;
-            if (prayerName === "Dhuhr" && shouldShowJumma) {
-              prayerName = "Jumma";
-            } else if (prayerName === "Jumma" && !shouldShowJumma) {
-              prayerName = "Dhuhr";
+            // Map Dhuhr/Jumma for UI display based on showJumma setting and whether it's Friday
+            const shouldShowJumma = (showJumma ?? true) && isFriday;
+
+            // If database has "Jumma" and we should show Jumma, use "Jumma" in UI
+            // If database has "Jumma" but we shouldn't show Jumma, use "Dhuhr" in UI
+            // If database has "Dhuhr" and we should show Jumma, use "Jumma" in UI
+            // If database has "Dhuhr" and we shouldn't show Jumma, use "Dhuhr" in UI
+            if (prayerName === "Jumma") {
+              uiPrayerName = shouldShowJumma ? "Jumma" : "Dhuhr";
+            } else if (prayerName === "Dhuhr") {
+              uiPrayerName = shouldShowJumma ? "Jumma" : "Dhuhr";
             }
 
-            // Mark prayer as selected
-            if (prayerName in restoredSelectedPrayers) {
-              restoredSelectedPrayers[prayerName] = true;
+            // Mark prayer as selected using the UI prayer name
+            if (uiPrayerName in restoredSelectedPrayers) {
+              restoredSelectedPrayers[uiPrayerName] = true;
             }
 
-            // Restore timestamp
+            // Restore timestamp using UI prayer name
             if (prayer.offeredAt) {
-              restoredTimestamps[prayerName] = prayer.offeredAt;
+              restoredTimestamps[uiPrayerName] = prayer.offeredAt;
             }
 
-            // Restore sub-prayers
-            if (prayerName === "Tahajjud") {
+            // Restore sub-prayers using UI prayer name
+            if (uiPrayerName === "Tahajjud") {
               // For Tahajjud, map rakats back to checkboxes
               if (prayer.subPrayers && prayer.subPrayers.length > 0) {
                 const tahajjudSubPrayer = prayer.subPrayers[0];
@@ -411,8 +457,9 @@ export default function Home() {
               }
             } else {
               // For other prayers, map sub-prayers back to checkboxes
+              // Use UI prayer name to get the correct sub-prayers list
               if (prayer.subPrayers && prayer.subPrayers.length > 0) {
-                const subPrayersList = prayerSubPrayers[prayerName] || [];
+                const subPrayersList = prayerSubPrayers[uiPrayerName] || [];
 
                 prayer.subPrayers.forEach((subPrayer) => {
                   // Find matching sub-prayer in the list
@@ -427,7 +474,7 @@ export default function Home() {
                       subPrayer.type === expectedType
                     ) {
                       const subPrayerKey = `${expectedSubPrayer}-${index}`;
-                      restoredSubPrayers[prayerName][subPrayerKey] = true;
+                      restoredSubPrayers[uiPrayerName][subPrayerKey] = true;
                     }
                   });
                 });
@@ -460,7 +507,7 @@ export default function Home() {
     };
 
     loadTodayPrayers();
-  }, [isAuthenticated, user, prayerTimes]); // Fetch when auth or prayer times change
+  }, [isAuthenticated, user, prayerTimes, showJumma, isFriday]); // Fetch when auth, prayer times, showJumma, or isFriday changes
 
   // Save prayer data whenever state changes (only after user interaction)
   useEffect(() => {
@@ -558,7 +605,7 @@ export default function Home() {
 
       // Check if today is Friday
       const isFridayToday = today.getDay() === 5; // Friday
-      const shouldShowJumma = showJumma && isFridayToday;
+      const shouldShowJumma = (showJumma ?? true) && isFridayToday;
 
       const prayerData = {
         date: dateStr,
@@ -573,10 +620,11 @@ export default function Home() {
             currentPrayerTimestamps[prayerName] || new Date().toISOString();
           const timeStr = new Date(timestamp).toTimeString().split(" ")[0];
 
-          // Map prayer name for saving: if showJumma is true and prayer is Jumma, save as Jumma
-          // If showJumma is false and prayer is Dhuhr, save as Dhuhr
-          // If showJumma is true and we have Dhuhr selected, don't save it (Jumma replaces it)
-          // If showJumma is false and we have Jumma selected, don't save it (Dhuhr replaces it)
+          // Map prayer name for saving:
+          // - If it's Friday and showJumma is true, and user clicked Jumma, save as "Jumma"
+          // - If it's Friday and showJumma is true, and user clicked Dhuhr (shouldn't happen), skip it
+          // - If it's not Friday or showJumma is false, and user clicked Dhuhr, save as "Dhuhr"
+          // - If it's not Friday or showJumma is false, and user clicked Jumma (shouldn't happen), map to "Dhuhr"
           let savePrayerName = prayerName;
           if (shouldShowJumma && prayerName === "Dhuhr") {
             return; // Skip saving Dhuhr when Jumma is enabled and it's Friday
@@ -584,6 +632,7 @@ export default function Home() {
           if (!shouldShowJumma && prayerName === "Jumma") {
             savePrayerName = "Dhuhr"; // Map Jumma to Dhuhr when it's not Friday or Jumma is disabled
           }
+          // If shouldShowJumma is true and prayerName is "Jumma", save as "Jumma" (no mapping needed)
 
           const prayerInfo = {
             name: savePrayerName,
@@ -686,17 +735,9 @@ export default function Home() {
     showJumma,
   ]);
 
-  // Check if today is Friday (0 = Sunday, 5 = Friday)
-  // Use currentDate to ensure consistency between server and client
-  const isFriday = useMemo(() => {
-    if (!currentDate) return false;
-    const date = new Date(currentDate + "T00:00:00"); // Use currentDate string to avoid timezone issues
-    return date.getDay() === 5; // Friday
-  }, [currentDate]);
-
   // Get effective main prayers list (Jumma instead of Dhuhr if enabled AND it's Friday)
   const effectiveMainPrayers = useMemo(() => {
-    const shouldShowJumma = showJumma && isFriday;
+    const shouldShowJumma = (showJumma ?? true) && isFriday;
     if (shouldShowJumma) {
       return mainPrayers.filter((p) => p !== "Dhuhr");
     }
@@ -710,7 +751,7 @@ export default function Home() {
     ];
 
     // Show Jumma only if showJumma is enabled AND it's Friday
-    const shouldShowJumma = showJumma && isFriday;
+    const shouldShowJumma = (showJumma ?? true) && isFriday;
     if (shouldShowJumma) {
       basePrayers.push({ name: "Jumma", time: prayerTimes.Jumma });
     } else {
@@ -778,13 +819,13 @@ export default function Home() {
   const generateEmptyLast7Days = () => {
     const today = new Date();
     const days = [];
-    
+
     // Get last 7 days including today (6 days ago to today = 7 days)
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split("T")[0];
-      
+
       days.push({
         date: date,
         dateStr: dateStr,
@@ -794,7 +835,7 @@ export default function Home() {
         selectedCount: 0,
       });
     }
-    
+
     return days;
   };
 
@@ -1176,6 +1217,24 @@ export default function Home() {
                 isFriday={isFriday}
               />
             </BlurFade>
+          </div>
+          <div className="col-span-12 lg:col-span-12">
+            <div className="mt-8 text-center">
+              <p className="text-xs text-muted-foreground">
+                This feature is intended solely to help you track your prayers
+                and maintain consistency. All prayers are for Allah alone.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Developed by{" "}
+                <a
+                  href="https://github.com/yourusername"
+                  className="text-primary underline"
+                >
+                  Abdullah Minhas
+                </a>{" "}
+                ✨
+              </p>
+            </div>
           </div>
         </div>
       </div>
