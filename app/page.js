@@ -1227,7 +1227,8 @@ export default function Home() {
               <p className="text-xs text-muted-foreground">
                 Developed by{" "}
                 <a
-                  href="https://github.com/yourusername"
+                  href="https://abdullahminhas.github.io"
+                  target="_blank"
                   className="text-primary underline"
                 >
                   Abdullah Minhas

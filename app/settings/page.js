@@ -135,8 +135,7 @@ export default function SettingsPage() {
                   Show Jumma
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Instead of showing Dhuhr, Jumma will be shown instead on
-                  friday.
+                  On Fridays, Jumma will be displayed in place of Dhuhr.
                 </p>
               </div>
               <Switch

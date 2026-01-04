@@ -22,9 +22,11 @@ export async function GET(request, { params }) {
 
     await connectDB();
 
-    const { date } = params;
+    const { date } = await params;
+    console.log(`📅 GET /api/prayers/[date] - Fetching prayers for date: ${date}, email: ${email}`);
 
     const prayer = await Prayer.findOne({ date, email });
+    console.log(`📅 GET /api/prayers/[date] - Found prayer:`, prayer ? "Yes" : "No");
 
     if (!prayer) {
       return NextResponse.json(
@@ -65,7 +67,7 @@ export async function PUT(request, { params }) {
 
     await connectDB();
 
-    const { date } = params;
+    const { date } = await params;
     const body = await request.json();
     const { prayers } = body;
 
@@ -130,7 +132,7 @@ export async function DELETE(request, { params }) {
 
     await connectDB();
 
-    const { date } = params;
+    const { date } = await params;
 
     const prayer = await Prayer.findOneAndDelete({ date, email });
 

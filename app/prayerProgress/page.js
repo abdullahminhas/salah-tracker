@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { getMonthPrayers } from "@/lib/prayer-api";
+import { getMonthPrayers, getTotalExpectedPrayers } from "@/lib/prayer-api";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Define main prayers
@@ -20,6 +20,10 @@ export default function PrayerProgressPage() {
   const [monthData, setMonthData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Store total expected prayers, total offered prayers, and total days
+  const [totalExpectedPrayers, setTotalExpectedPrayers] = useState(null);
+  const [totalPrayersOffered, setTotalPrayersOffered] = useState(null);
+  const [totalDays, setTotalDays] = useState(null);
 
   // Fetch month data when month changes
   useEffect(() => {
@@ -50,6 +54,33 @@ export default function PrayerProgressPage() {
 
     fetchMonthData();
   }, [currentMonth, isAuthenticated, user]);
+
+  // Fetch total expected prayers
+  useEffect(() => {
+    const fetchTotalExpected = async () => {
+      // Only fetch if user is authenticated
+      if (!isAuthenticated || !user) {
+        setTotalExpectedPrayers(null);
+        setTotalPrayersOffered(null);
+        setTotalDays(null);
+        return;
+      }
+
+      try {
+        const data = await getTotalExpectedPrayers();
+        setTotalExpectedPrayers(data?.totalExpectedPrayers || null);
+        setTotalPrayersOffered(data?.totalPrayersOffered || null);
+        setTotalDays(data?.totalDays || null);
+      } catch (err) {
+        console.error("Error fetching total expected prayers:", err);
+        setTotalExpectedPrayers(null);
+        setTotalPrayersOffered(null);
+        setTotalDays(null);
+      }
+    };
+
+    fetchTotalExpected();
+  }, [isAuthenticated, user]);
 
   // Create a map for quick lookup of date progress
   const progressMap = useMemo(() => {
@@ -94,9 +125,13 @@ export default function PrayerProgressPage() {
     const circumference = radius * 2 * Math.PI;
     const offset = circumference - (progress / 100) * circumference;
 
-    const handleClick = () => {
-      router.push(`/prayerProgress?date=${dateStr}`);
+    const handleClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      router.push(`/prayerProgress/${dateStr}`);
     };
+
+    const { onClick: _onClick, ...restProps } = props;
 
     return (
       <button
@@ -107,7 +142,7 @@ export default function PrayerProgressPage() {
           modifiers.selected && "bg-primary text-primary-foreground rounded-md",
           className
         )}
-        {...props}
+        {...restProps}
       >
         <span
           className={cn(
@@ -162,12 +197,33 @@ export default function PrayerProgressPage() {
             <h1 className="text-4xl font-bold text-foreground">
               Current Month Progress
             </h1>
-            <p className="text-base text-muted-foreground">
-              View your prayer progress for the current month
-            </p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-base text-muted-foreground">
+                View your prayer progress for the current month
+              </p>
+              {totalDays !== null && totalExpectedPrayers !== null && (
+                <p className="text-xs text-muted-foreground">
+                  You have been registered for {totalDays}{" "}
+                  {totalDays === 1 ? "day" : "days"}. In that time, the total
+                  expected prayers since joining are{" "}
+                  <span className="font-semibold text-foreground">
+                    {totalExpectedPrayers}
+                  </span>
+                  {totalPrayersOffered !== null && (
+                    <>
+                      , but you have offered{" "}
+                      <span className="font-semibold text-foreground">
+                        {totalPrayersOffered}
+                      </span>{" "}
+                      {totalPrayersOffered === 1 ? "prayer" : "prayers"}.
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
           </div>
           <div className="w-full flex justify-center">
-            <div className="w-full max-w-fit">
+            <div className="w-full max-w-fit relative">
               <Calendar
                 mode="single"
                 selected={undefined}
