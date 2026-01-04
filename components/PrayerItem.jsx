@@ -1,6 +1,10 @@
 "use client";
 
-import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { ShineBorder } from "@/components/ui/shine-border";
@@ -9,6 +13,7 @@ import { SubPrayerCard } from "./SubPrayerCard";
 import { TahajjudCheckboxes } from "./TahajjudCheckboxes";
 import { prayerSubPrayers } from "./constants";
 import { cn } from "@/lib/utils";
+import { Highlighter } from "@/components/ui/highlighter";
 
 export function PrayerItem({
   prayer,
@@ -38,13 +43,20 @@ export function PrayerItem({
           <CircularProgress value={completion} size={50} />
           <div className="flex-1 text-left">
             <div className="flex items-center gap-2">
-              <div className="font-semibold text-lg text-foreground">
-                {prayer.name}
+              <div className={cn("font-semibold text-lg text-primary", isCurrentPrayer && "text-[#ffffff] dark:text-[#000000]")}>
+                {isCurrentPrayer ? (
+                  <Highlighter action="highlight" animationDuration={0} iterations="1" color="var(--primary)">
+                    {prayer.name}
+                  </Highlighter>
+                ) : (
+                  prayer.name
+                )}
               </div>
+
               {isCurrentPrayer && (
                 <div
                   className={cn(
-                    "group rounded-full border border-black/5 text-white dark:border-white/5 dark:bg-neutral-900"
+                    "group rounded-full border border-black/5 text-white ms-2 dark:border-white/5 dark:bg-neutral-900"
                   )}
                 >
                   <AnimatedShinyText className="text-xs inline-flex items-center justify-center px-2 py-0.5 transition ease-out hover:text-neutral-600 hover:duration-300 hover:dark:text-neutral-400">
@@ -77,7 +89,8 @@ export function PrayerItem({
               const beforeFarz = isBeforeFarz(prayer.name, index);
               const isDisabled =
                 !isFarzCheckbox && !beforeFarz && !isFarzCheckedForPrayer;
-              const isChecked = subPrayers[prayer.name]?.[subPrayerKey] || false;
+              const isChecked =
+                subPrayers[prayer.name]?.[subPrayerKey] || false;
 
               return (
                 <SubPrayerCard
@@ -103,4 +116,3 @@ export function PrayerItem({
     </AccordionItem>
   );
 }
-

@@ -315,16 +315,29 @@ export default function Home() {
   useEffect(() => {
     if (!latitude || !longitude) return;
 
+    const controller = new AbortController();
+    let timeoutId;
+
     const fetchCityName = async () => {
       try {
+        timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
           {
             headers: {
               "User-Agent": "SalahTracker/1.0", // Required by Nominatim
             },
+            signal: controller.signal,
           }
         );
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
 
         if (data && data.address) {
@@ -340,12 +353,26 @@ export default function Home() {
           setCityName(city);
         }
       } catch (error) {
-        console.error("Error fetching city name:", error);
-        setCityName(null);
+        // Silently handle errors - city name is not critical
+        if (error.name !== "AbortError" && !controller.signal.aborted) {
+          console.error("Error fetching city name:", error);
+        }
+        // Only update state if not aborted (component still mounted)
+        if (!controller.signal.aborted) {
+          setCityName(null);
+        }
       }
     };
 
     fetchCityName();
+
+    // Cleanup: abort fetch if component unmounts or dependencies change
+    return () => {
+      controller.abort();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [latitude, longitude]);
 
   // Check if today is Friday (0 = Sunday, 5 = Friday)

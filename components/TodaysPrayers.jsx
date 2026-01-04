@@ -3,6 +3,7 @@
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { PrayerAccordion } from "./PrayerAccordion";
+import { cn } from "@/lib/utils";
 
 export function TodaysPrayers({
   madhab,
@@ -48,7 +49,7 @@ export function TodaysPrayers({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Progress</span>
-          <span className="font-medium text-foreground">{progress}%</span>
+          <span className={cn("font-medium text-foreground", progress === 100 && "text-green-600 dark:text-green-400")}>{progress}%</span>
         </div>
         <Progress value={progress} />
       </div>
