@@ -19,12 +19,16 @@ export function AuthProvider({ children }) {
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
+          // Set cookie for middleware authentication (7 days expiry)
+          document.cookie = `token=${storedToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
         // Clear invalid data
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        // Clear cookie
+        document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
       } finally {
         setLoading(false);
       }
@@ -38,6 +42,10 @@ export function AuthProvider({ children }) {
     setToken(authToken);
     localStorage.setItem("token", authToken);
     localStorage.setItem("user", JSON.stringify(userData));
+    // Set cookie for middleware authentication (7 days expiry)
+    if (typeof document !== "undefined") {
+      document.cookie = `token=${authToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+    }
   };
 
   const logout = () => {
@@ -45,6 +53,10 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    // Clear cookie for middleware authentication
+    if (typeof document !== "undefined") {
+      document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
+    }
   };
 
   const updateUser = (userData) => {

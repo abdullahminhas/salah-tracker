@@ -85,6 +85,10 @@ export function LoginForm({
       // Success - use auth context to login
       if (data.data?.token && data.data?.user) {
         login(data.data.user, data.data.token);
+        
+        // Set cookie for middleware authentication
+        document.cookie = `token=${data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        
         toast.success("Login successful!");
         
         // Reset form

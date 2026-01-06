@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
@@ -25,6 +26,7 @@ import { Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export function Navbar() {
+  const router = useRouter();
   const { user, logout, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -65,11 +67,14 @@ export function Navbar() {
                     <DropdownMenuLabel className="capitalize">
                       {user?.name}
                     </DropdownMenuLabel>
-                    {/* <DropdownMenuSeparator />
-    <DropdownMenuItem>Profile</DropdownMenuItem>
-    <DropdownMenuItem>Billing</DropdownMenuItem> */}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Team</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push("/profile")}>
+                      Profile
+                    </DropdownMenuItem>
+                    {/* <DropdownMenuItem>Billing</DropdownMenuItem> */}
+                    <DropdownMenuItem onClick={() => router.push("/settings")}>
+                      Settings
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

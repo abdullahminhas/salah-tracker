@@ -1203,7 +1203,7 @@ export default function Home() {
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             <p className="text-sm font-medium text-foreground">
               Loading prayer data...
-            </p>
+          </p>
           </div>
         </div>
       )}
@@ -1242,7 +1242,7 @@ export default function Home() {
                 last7Days={last7Days}
                 showJumma={showJumma}
                 isFriday={isFriday}
-              />
+            />
             </BlurFade>
           </div>
           <div className="col-span-12 lg:col-span-12">
@@ -1255,9 +1255,9 @@ export default function Home() {
                 Developed by{" "}
                 <a
                   href="https://abdullahminhas.github.io"
-                  target="_blank"
+            target="_blank"
                   className="text-primary underline"
-                >
+          >
                   Abdullah Minhas
                 </a>{" "}
                 ✨
@@ -1265,7 +1265,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </div>
+    </div>
     </>
   );
 }

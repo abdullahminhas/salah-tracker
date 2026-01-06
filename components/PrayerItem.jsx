@@ -45,7 +45,7 @@ export function PrayerItem({
             <div className="flex items-center gap-2">
               <div className={cn("font-semibold text-lg text-primary", isCurrentPrayer && "text-[#ffffff] dark:text-[#000000]")}>
                 {isCurrentPrayer ? (
-                  <Highlighter action="highlight" animationDuration={0} iterations="1" color="var(--primary)">
+                  <Highlighter action="highlight" animationDuration={0} iterations="1" padding="0px" color="var(--primary)">
                     {prayer.name}
                   </Highlighter>
                 ) : (

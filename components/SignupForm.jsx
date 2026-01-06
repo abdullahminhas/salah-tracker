@@ -98,6 +98,10 @@ export function SignupForm({
       // Success - use auth context to login
       if (data.data?.token && data.data?.user) {
         login(data.data.user, data.data.token);
+        
+        // Set cookie for middleware authentication
+        document.cookie = `token=${data.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        
         toast.success("Account created successfully!");
         
         // Reset form
@@ -138,7 +142,7 @@ export function SignupForm({
             <Input
               id="name"
               type="text"
-              placeholder="John Doe"
+              placeholder="Abdullah"
               value={formData.name}
               onChange={handleChange}
               required

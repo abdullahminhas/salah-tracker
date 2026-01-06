@@ -15,7 +15,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { AreaChart, Area, CartesianGrid, XAxis } from "recharts";
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis } from "recharts";
 import { TrendingUp } from "lucide-react";
 import {
   Card,
@@ -34,7 +34,7 @@ const mainPrayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
 export default function PrayerProgressPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   // Track the current month being displayed
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -48,6 +48,8 @@ export default function PrayerProgressPage() {
   const [totalExpectedPrayers, setTotalExpectedPrayers] = useState(null);
   const [totalPrayersOffered, setTotalPrayersOffered] = useState(null);
   const [totalDays, setTotalDays] = useState(null);
+  // Loading state for total expected prayers
+  const [totalExpectedLoading, setTotalExpectedLoading] = useState(true);
 
   // Fetch month data when month changes
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function PrayerProgressPage() {
       // Only fetch if user is authenticated
       if (!isAuthenticated || !user) {
         setMonthData([]);
+        setLoading(false);
         return;
       }
 
@@ -93,9 +96,11 @@ export default function PrayerProgressPage() {
         setTotalExpectedPrayers(null);
         setTotalPrayersOffered(null);
         setTotalDays(null);
+        setTotalExpectedLoading(false);
         return;
       }
 
+      setTotalExpectedLoading(true);
       try {
         const data = await getTotalExpectedPrayers();
         setTotalExpectedPrayers(data?.totalExpectedPrayers || null);
@@ -106,11 +111,22 @@ export default function PrayerProgressPage() {
         setTotalExpectedPrayers(null);
         setTotalPrayersOffered(null);
         setTotalDays(null);
+      } finally {
+        setTotalExpectedLoading(false);
       }
     };
 
     fetchTotalExpected();
   }, [isAuthenticated, user]);
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace("/");
+      }
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   // Create a map for quick lookup of date progress
   const progressMap = useMemo(() => {
@@ -284,6 +300,14 @@ export default function PrayerProgressPage() {
       }));
   }, [dailyCounts, currentMonth]);
 
+  // Show nothing while checking authentication or redirecting
+  if (authLoading || !isAuthenticated) {
+    return null;
+  }
+
+  // Check if any data is still loading
+  const isLoading = loading || totalExpectedLoading;
+
   const chartConfig = {
     prayers: {
       label: "Prayers",
@@ -292,18 +316,31 @@ export default function PrayerProgressPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-bold text-foreground">
-              Prayer Progress
-            </h1>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-base text-muted-foreground">
-                View your prayer progress
-              </p>
-              {/* {totalDays !== null && totalExpectedPrayers !== null && (
+    <>
+      {/* Loading Screen with Backdrop Blur */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <p className="text-sm font-medium text-foreground">
+              Loading prayer data...
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-4xl font-bold text-foreground">
+                Prayer Progress
+              </h1>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-base text-muted-foreground">
+                  View your prayer progress
+                </p>
+                {/* {totalDays !== null && totalExpectedPrayers !== null && (
                 <p className="text-xs text-muted-foreground">
                   You have been registered for {totalDays}{" "}
                   {totalDays === 1 ? "day" : "days"}. In that time, the total
@@ -322,25 +359,25 @@ export default function PrayerProgressPage() {
                   )}
                 </p>
               )} */}
+              </div>
             </div>
-          </div>
-          <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-2 sm:grid-cols-4 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
-            <Card className="@container/card">
-              <CardHeader>
-                <CardDescription>Total Prayers Offered</CardDescription>
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {totalPrayersOffered !== null
-                    ? totalPrayersOffered.toLocaleString()
-                    : "—"}
-                </CardTitle>
-                {/* <CardAction>
+            <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-2 sm:grid-cols-4 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total Prayers Offered</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {totalPrayersOffered !== null
+                      ? totalPrayersOffered.toLocaleString()
+                      : "—"}
+                  </CardTitle>
+                  {/* <CardAction>
                   <Badge variant="outline">
                     <IconTrendingUp />
                     +12.5%
                   </Badge>
                 </CardAction> */}
-              </CardHeader>
-              {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                </CardHeader>
+                {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
                 <div className="line-clamp-1 flex gap-2 font-medium">
                   Trending up this month
                   <IconTrendingUp className="size-4" />
@@ -349,21 +386,21 @@ export default function PrayerProgressPage() {
                   Visitors for the last 6 months
                 </div>
               </CardFooter> */}
-            </Card>
-            <Card className="@container/card">
-              <CardHeader>
-                <CardDescription>Prayers Offered this month</CardDescription>
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {totalPrayersThisMonth.toLocaleString()}
-                </CardTitle>
-                {/* <CardAction>
+              </Card>
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Prayers Offered this month</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {totalPrayersThisMonth.toLocaleString()}
+                  </CardTitle>
+                  {/* <CardAction>
                   <Badge variant="outline">
                     <IconTrendingDown />
                     -20%
                   </Badge>
                 </CardAction> */}
-              </CardHeader>
-              {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                </CardHeader>
+                {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
                 <div className="line-clamp-1 flex gap-2 font-medium">
                   Down 20% this period
                   <IconTrendingDown className="size-4" />
@@ -372,21 +409,21 @@ export default function PrayerProgressPage() {
                   Acquisition needs attention
                 </div>
               </CardFooter> */}
-            </Card>
-            <Card className="@container/card">
-              <CardHeader>
-                <CardDescription>Total Prayers this month</CardDescription>
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {totalExpectedPrayersThisMonth.toLocaleString()}
-                </CardTitle>
-                {/* <CardAction>
+              </Card>
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total Prayers this month</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {totalExpectedPrayersThisMonth.toLocaleString()}
+                  </CardTitle>
+                  {/* <CardAction>
                   <Badge variant="outline">
                     <IconTrendingUp />
                     +12.5%
                   </Badge>
                 </CardAction> */}
-              </CardHeader>
-              {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                </CardHeader>
+                {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
                 <div className="line-clamp-1 flex gap-2 font-medium">
                   Strong user retention
                   <IconTrendingUp className="size-4" />
@@ -395,23 +432,23 @@ export default function PrayerProgressPage() {
                   Engagement exceed targets
                 </div>
               </CardFooter> */}
-            </Card>
-            <Card className="@container/card">
-              <CardHeader>
-                <CardDescription>Total prayers since joining</CardDescription>
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {totalExpectedPrayers !== null
-                    ? totalExpectedPrayers.toLocaleString()
-                    : "—"}
-                </CardTitle>
-                {/* <CardAction>
+              </Card>
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total prayers since joining</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {totalExpectedPrayers !== null
+                      ? totalExpectedPrayers.toLocaleString()
+                      : "—"}
+                  </CardTitle>
+                  {/* <CardAction>
                   <Badge variant="outline">
                     <IconTrendingUp />
                     +4.5%
                   </Badge>
                 </CardAction> */}
-              </CardHeader>
-              {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                </CardHeader>
+                {/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
                 <div className="line-clamp-1 flex gap-2 font-medium">
                   Steady performance increase{" "}
                   <IconTrendingUp className="size-4" />
@@ -420,72 +457,81 @@ export default function PrayerProgressPage() {
                   Meets growth projections
                 </div>
               </CardFooter> */}
-            </Card>
-          </div>
-          <div className="grid grid-cols-12 gap-4">
-            <Card className="col-span-12 md:col-span-8">
-              <CardHeader>
-                <CardTitle>Current Month Progress</CardTitle>
-                <CardDescription>
-                  Showing your prayer progress for the current month
-                </CardDescription>
-              </CardHeader>
+              </Card>
+            </div>
+            <div className="grid grid-cols-12 gap-4">
+              <Card className="col-span-12 md:col-span-8">
+                <CardHeader>
+                  <CardTitle>Current Month Progress</CardTitle>
+                  <CardDescription>
+                    Showing your prayer progress for the current month
+                  </CardDescription>
+                </CardHeader>
 
-              <CardContent>
-                <ChartContainer config={chartConfig}>
-                  <AreaChart
-                    accessibilityLayer
-                    data={chartData}
-                    margin={{ left: 12, right: 12 }}
-                  >
-                    <CartesianGrid vertical={false} />
+                <CardContent>
+                  <ChartContainer config={chartConfig}>
+                    <AreaChart
+                      accessibilityLayer
+                      data={chartData}
+                      margin={{ left: 12, right: 12 }}
+                    >
+                      <CartesianGrid vertical={false} />
 
-                    <XAxis
-                      dataKey="day"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                    />
+                      <XAxis
+                        dataKey="day"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                      />
 
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent />}
-                    />
+                      <YAxis
+                        domain={[0, "auto"]}
+                        hide={true}
+                        allowDataOverflow={false}
+                      />
 
-                    <defs>
-                      <linearGradient
-                        id="fillPrayers"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="var(--primary)"
-                          stopOpacity={0.8}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="var(--primary)"
-                          stopOpacity={0.1}
-                        />
-                      </linearGradient>
-                    </defs>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent />}
+                      />
 
-                    <Area
-                      dataKey="prayers"
-                      type="natural"
-                      fill="url(#fillPrayers)"
-                      fillOpacity={0.4}
-                      stroke="var(--primary)"
-                      stackId="a"
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </CardContent>
+                      <defs>
+                        <linearGradient
+                          id="fillPrayers"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="var(--primary)"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="var(--primary)"
+                            stopOpacity={0.1}
+                          />
+                        </linearGradient>
+                      </defs>
 
-              {/* <CardFooter>
+                      <Area
+                        dataKey="prayers"
+                        type="monotone"
+                        fill="url(#fillPrayers)"
+                        fillOpacity={0.4}
+                        stroke="var(--primary)"
+                        stackId="a"
+                        baseValue={0}
+                        connectNulls={false}
+                        isAnimationActive={false}
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                </CardContent>
+
+                {/* <CardFooter>
                 <div className="flex w-full items-start gap-2 text-sm">
                   <div className="grid gap-2">
                     <div className="flex items-center gap-2 leading-none font-medium">
@@ -498,44 +544,40 @@ export default function PrayerProgressPage() {
                   </div>
                 </div>
               </CardFooter> */}
-            </Card>
-            <div className="col-span-12 md:col-span-4 w-full">
-              <Card className="w-full h-full">
-                <CardContent className="w-full h-full sm:p-3 flex flex-col relative">
-                  <div className="w-full flex-1 min-w-0">
-                    <Calendar
-                      mode="single"
-                      selected={undefined}
-                      month={currentMonth}
-                      onMonthChange={setCurrentMonth}
-                      showOutsideDays={false}
-                      components={{
-                        DayButton: CustomDayButton,
-                      }}
-                      className="w-full rounded-md border-0 p-0"
-                      classNames={{
-                        root: "w-full",
-                        months: "w-full",
-                        month: "w-full",
-                      }}
-                    />
-                  </div>
-                  {loading && (
-                    <p className="text-sm text-muted-foreground text-center mt-4">
-                      Loading prayer data...
-                    </p>
-                  )}
-                  {error && (
-                    <p className="text-sm text-destructive text-center mt-4">
-                      Error loading data: {error}
-                    </p>
-                  )}
-                </CardContent>
               </Card>
+              <div className="col-span-12 md:col-span-4 w-full">
+                <Card className="w-full h-full">
+                  <CardContent className="w-full h-full sm:p-3 flex flex-col relative">
+                    <div className="w-full flex-1 min-w-0">
+                      <Calendar
+                        mode="single"
+                        selected={undefined}
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        showOutsideDays={false}
+                        components={{
+                          DayButton: CustomDayButton,
+                        }}
+                        className="w-full rounded-md border-0 p-0"
+                        classNames={{
+                          root: "w-full",
+                          months: "w-full",
+                          month: "w-full",
+                        }}
+                      />
+                    </div>
+                    {error && (
+                      <p className="text-sm text-destructive text-center mt-4">
+                        Error loading data: {error}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

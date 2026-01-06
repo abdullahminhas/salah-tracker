@@ -21,10 +21,12 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <Sidebar>
@@ -78,27 +80,34 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      {isAuthenticated && (
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              onClick={() => router.push("/profile")}
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src="" alt="User" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src="" alt={user?.name || "User"} />
+                <AvatarFallback>
+                  {user?.name?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">User</span>
+                <span className="truncate font-semibold capitalize">
+                  {user?.name || "User"}
+                </span>
                 <span className="truncate text-xs text-sidebar-foreground/70">
-                  user@example.com
+                  {user?.email || "user@example.com"}
                 </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      )}
       <SidebarRail />
     </Sidebar>
   );

@@ -24,16 +24,26 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { mainPrayers, prayerSubPrayers } from "@/components/constants";
+import { Separator } from "@/components/ui/separator";
 
 export default function PrayerDateDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const date = params?.date;
 
   const [prayerData, setPrayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.replace("/");
+      }
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   useEffect(() => {
     const fetchPrayerData = async () => {
@@ -65,6 +75,11 @@ export default function PrayerDateDetailPage() {
 
     fetchPrayerData();
   }, [date, isAuthenticated, user]);
+
+  // Show nothing while checking authentication or redirecting
+  if (authLoading || !isAuthenticated) {
+    return null;
+  }
 
   // Format date for display
   const formattedDate = date
@@ -220,28 +235,82 @@ export default function PrayerDateDetailPage() {
               {/* Prayer List */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {prayerData.prayers.map((prayer, index) => (
-                  <Card key={index} className="flex flex-col">
+                  <Card key={index} className="flex flex-col gap-2">
                     <CardHeader>
                       <div className="flex flex-col gap-1">
                         <CardTitle className="text-xl">{prayer.name}</CardTitle>
                         {prayer.offered && prayer.offeredAtTime && (
                           <CardDescription className="flex flex-row justify-between items-center">
-                            <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5" />
-                              {prayer.time && formatTimeToAMPM(prayer.time)}
-                            </span>
-                            <span className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-1.5">
-                              <ClockCheck className="h-3.5 w-3.5" />
-                              {formatTimeToAMPM(prayer.offeredAtTime)}
-                            </span>
+                            {prayer.time && (
+                              <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5" />
+                                {formatTimeToAMPM(prayer.time)}
+                              </span>
+                            )}
+                            {prayer.offeredAtTime && (
+                              <span className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-1.5">
+                                <ClockCheck className="h-3.5 w-3.5" />
+                                {formatTimeToAMPM(prayer.offeredAtTime)}
+                              </span>
+                            )}
                           </CardDescription>
                         )}
                       </div>
                     </CardHeader>
                     {prayer.offered && (
                       <CardContent className="flex flex-col h-full gap-4">
+                        <Separator />
                         <div className="flex-1">
                           {(() => {
+                            // Handle Tahajjud differently - it has 6 checkboxes (each 2 rakats)
+                            if (prayer.name === "Tahajjud") {
+                              const offeredSubPrayers = prayer.subPrayers || [];
+                              // Get the total rakat count from offered sub-prayers
+                              let totalRakats = 0;
+                              if (
+                                offeredSubPrayers.length > 0 &&
+                                offeredSubPrayers[0].rakat
+                              ) {
+                                totalRakats =
+                                  parseInt(offeredSubPrayers[0].rakat) || 0;
+                              }
+
+                              // Only show offered checkboxes
+                              // Calculate how many checkboxes were checked (each checkbox = 2 rakats)
+                              const checkedCount = totalRakats / 2;
+
+                              if (checkedCount === 0) {
+                                return null; // No checkboxes checked, don't show anything
+                              }
+
+                              // Create array of only the offered checkboxes
+                              const offeredCheckboxes = Array.from(
+                                { length: checkedCount },
+                                (_, i) => {
+                                  const checkboxRakats = (i + 1) * 2; // 2, 4, 6, 8, 10, 12
+                                  return {
+                                    index: i,
+                                    rakats: checkboxRakats,
+                                  };
+                                }
+                              );
+
+                              return (
+                                <div className="flex flex-col gap-2">
+                                  {offeredCheckboxes.map((item) => (
+                                    <div
+                                      key={item.index}
+                                      className="px-3 py-1.5 bg-muted rounded-md text-sm flex items-center gap-2"
+                                    >
+                                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                      <span>{item.rakats} Rakats</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+
+                            // Handle other prayers
                             const expectedSubPrayers =
                               prayerSubPrayers[prayer.name] || [];
                             if (expectedSubPrayers.length === 0) return null;
@@ -311,6 +380,7 @@ export default function PrayerDateDetailPage() {
                           })()}
                         </div>
                         <div className="flex flex-col gap-2 mt-auto">
+                          <Separator className="mb-2 mt-1" />
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">
                               Fulfilled
