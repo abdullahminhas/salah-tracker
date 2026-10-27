@@ -80,7 +80,7 @@ export default function SettingsPage() {
       window.dispatchEvent(
         new CustomEvent("madhabChanged", {
           detail: { key: "madhab", value: madhab },
-        })
+        }),
       );
     }
   }, [madhab]);
@@ -97,14 +97,14 @@ export default function SettingsPage() {
       window.dispatchEvent(
         new CustomEvent("showJummaChanged", {
           detail: { key: "showJumma", value: showJumma },
-        })
+        }),
       );
     }
   }, [showJumma]);
 
   return (
     <div className="bg-muted min-h-full">
-      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 max-w-xl py-8 sm:px-6 lg:px-8">
         <Card>
           <CardHeader>
             <CardTitle>Settings</CardTitle>

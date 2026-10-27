@@ -3,6 +3,7 @@
 import { Separator } from "@/components/ui/separator";
 import { PrayerCompletion } from "./PrayerCompletion";
 import { Last7DaysProgress } from "./Last7DaysProgress";
+import { BlurFade } from "@/components/ui/blur-fade";
 
 export function ProgressSection({
   getPrayerCompletion,
@@ -10,18 +11,22 @@ export function ProgressSection({
   last7Days,
   showJumma = false,
   isFriday = false,
+  delay = 0.25,
 }) {
   return (
     <div className="flex flex-col gap-8">
-      <PrayerCompletion
-        getPrayerCompletion={getPrayerCompletion}
-        getTotalCompletion={getTotalCompletion}
-        showJumma={showJumma}
-        isFriday={isFriday}
-      />
+      <BlurFade delay={delay * 1.5} inView>
+        <PrayerCompletion
+          getPrayerCompletion={getPrayerCompletion}
+          getTotalCompletion={getTotalCompletion}
+          showJumma={showJumma}
+          isFriday={isFriday}
+        />
+      </BlurFade>
       <Separator />
-      <Last7DaysProgress last7Days={last7Days} />
+      <BlurFade delay={delay * 2} inView>
+        <Last7DaysProgress last7Days={last7Days} />
+      </BlurFade>
     </div>
   );
 }
-

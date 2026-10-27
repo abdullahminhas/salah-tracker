@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Analytics } from "@vercel/analytics/next";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,9 @@ export default function RootLayout({ children }) {
             enableSystem
             disableTransitionOnChange
           >
-            <LayoutWrapper>{children}</LayoutWrapper>
+            <LayoutWrapper>
+              <TooltipProvider>{children}</TooltipProvider>
+            </LayoutWrapper>
           </ThemeProvider>
           <Toaster />
         </AuthProvider>

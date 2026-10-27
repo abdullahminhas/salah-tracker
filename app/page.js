@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { BlurFade } from "@/components/ui/blur-fade";
+import { DotPattern } from "@/components/ui/dot-pattern";
 
 export default function Home() {
   const router = useRouter();
@@ -199,7 +200,7 @@ export default function Home() {
       // If the date has changed, reset everything
       if (currentDate !== today) {
         console.log(
-          `🔄 New day detected! Resetting progress. Old date: ${currentDate}, New date: ${today}`
+          `🔄 New day detected! Resetting progress. Old date: ${currentDate}, New date: ${today}`,
         );
         setCurrentDate(today);
         resetPrayerStates();
@@ -229,17 +230,17 @@ export default function Home() {
         (error) => {
           console.error("Error getting location:", error);
           setLocationError(
-            "Unable to get your location. Using default coordinates."
+            "Unable to get your location. Using default coordinates.",
           );
           // Fallback to default coordinates
           setLatitude("50.91406");
           setLongitude("-1.39783");
           setLocationLoading(false);
-        }
+        },
       );
     } else {
       setLocationError(
-        "Geolocation is not supported by your browser. Using default coordinates."
+        "Geolocation is not supported by your browser. Using default coordinates.",
       );
       setLatitude("50.91406");
       setLongitude("-1.39783");
@@ -257,7 +258,7 @@ export default function Home() {
       try {
         console.log(`🕌 Fetching prayer times for madhab: ${madhab}`);
         const response = await fetch(
-          `https://www.ummahapi.com/api/prayer-times?lat=${latitude}&lng=${longitude}&madhab=${madhab}&method=MuslimWorldLeague`
+          `https://www.ummahapi.com/api/prayer-times?lat=${latitude}&lng=${longitude}&madhab=${madhab}&method=MuslimWorldLeague`,
         );
         const data = await response.json();
 
@@ -292,7 +293,7 @@ export default function Home() {
             // Capitalize first letter
             setCurrentPrayer(
               currentPrayerName.charAt(0).toUpperCase() +
-                currentPrayerName.slice(1)
+                currentPrayerName.slice(1),
             );
           } else {
             setCurrentPrayer(null);
@@ -329,7 +330,7 @@ export default function Home() {
               "User-Agent": "SalahTracker/1.0", // Required by Nominatim
             },
             signal: controller.signal,
-          }
+          },
         );
 
         clearTimeout(timeoutId);
@@ -394,7 +395,7 @@ export default function Home() {
 
       // Wait for prayer times to be available
       const hasPrayerTimes = Object.values(prayerTimes).some(
-        (time) => time !== ""
+        (time) => time !== "",
       );
       if (!hasPrayerTimes) {
         // Don't set loading to false here - wait for prayer times to load first
@@ -410,7 +411,7 @@ export default function Home() {
 
         if (todayData && todayData.prayers && todayData.prayers.length > 0) {
           console.log(
-            `✅ Found ${todayData.prayers.length} prayers to restore`
+            `✅ Found ${todayData.prayers.length} prayers to restore`,
           );
 
           // Initialize restored states
@@ -719,12 +720,12 @@ export default function Home() {
       // Console the JSON when a prayer is checked (or state changes)
       console.log(
         "📋 Prayer Data JSON (when prayer checked):",
-        JSON.stringify(prayerData, null, 2)
+        JSON.stringify(prayerData, null, 2),
       );
       console.log("📋 Prayer Data JSON (compact):", JSON.stringify(prayerData));
       console.log(
         "🔍 Debug - Current selectedPrayers:",
-        currentSelectedPrayers
+        currentSelectedPrayers,
       );
       console.log("🔍 Debug - Current subPrayers:", currentSubPrayers);
 
@@ -745,7 +746,7 @@ export default function Home() {
         .catch((error) => {
           console.error(
             "❌ Error saving/updating prayer data in MongoDB:",
-            error
+            error,
           );
         });
     }, 500); // 500ms debounce
@@ -788,7 +789,7 @@ export default function Home() {
     basePrayers.push(
       { name: "Asr", time: prayerTimes.Asr },
       { name: "Maghrib", time: prayerTimes.Maghrib },
-      { name: "Isha", time: prayerTimes.Isha }
+      { name: "Isha", time: prayerTimes.Isha },
     );
 
     return basePrayers;
@@ -796,7 +797,7 @@ export default function Home() {
 
   // Calculate progress: count selected prayers excluding Tahajjud (20% each)
   const selectedMainPrayersCount = effectiveMainPrayers.filter(
-    (prayer) => selectedPrayers[prayer]
+    (prayer) => selectedPrayers[prayer],
   ).length;
   const progress = selectedMainPrayersCount * 20;
 
@@ -903,7 +904,7 @@ export default function Home() {
 
     const today = new Date().toISOString().split("T")[0];
     const selectedCount = effectiveMainPrayers.filter(
-      (prayer) => selectedPrayers[prayer]
+      (prayer) => selectedPrayers[prayer],
     ).length;
 
     setLast7Days((prev) =>
@@ -916,7 +917,7 @@ export default function Home() {
           };
         }
         return day;
-      })
+      }),
     );
   }, [selectedPrayers, last7Days.length]);
 
@@ -924,7 +925,7 @@ export default function Home() {
   const findFarzKey = (prayerName) => {
     const subPrayersList = prayerSubPrayers[prayerName];
     const farzIndex = subPrayersList.findIndex((subPrayer) =>
-      subPrayer.includes("Farz")
+      subPrayer.includes("Farz"),
     );
     if (farzIndex !== -1) {
       return `${subPrayersList[farzIndex]}-${farzIndex}`;
@@ -943,7 +944,7 @@ export default function Home() {
   const isBeforeFarz = (prayerName, subPrayerIndex) => {
     const subPrayersList = prayerSubPrayers[prayerName];
     const farzIndex = subPrayersList.findIndex((subPrayer) =>
-      subPrayer.includes("Farz")
+      subPrayer.includes("Farz"),
     );
     if (farzIndex === -1) return false; // No Farz found
     return subPrayerIndex < farzIndex;
@@ -1022,11 +1023,11 @@ export default function Home() {
       console.log(
         "✅ Prayer checked:",
         prayerName,
-        isSelected ? "SELECTED" : "UNSELECTED"
+        isSelected ? "SELECTED" : "UNSELECTED",
       );
       console.log(
         "📋 Current Prayer Data JSON:",
-        JSON.stringify(tempPrayerData, null, 2)
+        JSON.stringify(tempPrayerData, null, 2),
       );
 
       return updated;
@@ -1072,7 +1073,7 @@ export default function Home() {
           const rakatCount = parts[0];
           const rakatType = parts.slice(1).join(" ");
           toast.success(
-            `${value}, ${rakatType} (${rakatCount} Rakats) offered.`
+            `${value}, ${rakatType} (${rakatCount} Rakats) offered.`,
           );
         }
       }
@@ -1184,7 +1185,7 @@ export default function Home() {
           const rakatCount = parts[0];
           const rakatType = parts.slice(1).join(" ");
           toast.success(
-            `${prayerName}, ${rakatType} (${rakatCount} Rakats) offered.`
+            `${prayerName}, ${rakatType} (${rakatCount} Rakats) offered.`,
           );
         }
       }
@@ -1203,49 +1204,57 @@ export default function Home() {
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             <p className="text-sm font-medium text-foreground">
               Loading prayer data...
-          </p>
+            </p>
           </div>
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-12 gap-8">
-          {/* Left Column - Today's Prayers (6 columns) */}
-          <div className="col-span-12 lg:col-span-6">
-            <BlurFade delay={0.25} inView>
-              <TodaysPrayers
-                madhab={madhab}
-                setMadhab={setMadhab}
-                cityName={cityName}
-                locationError={locationError}
-                progress={progress}
-                prayers={prayers}
-                currentPrayer={currentPrayer}
-                openAccordion={openAccordion}
-                subPrayers={subPrayers}
-                getPrayerCompletion={getPrayerCompletion}
-                isFarzChecked={isFarzChecked}
-                isBeforeFarz={isBeforeFarz}
-                onAccordionChange={handleAccordionChange}
-                onToggleSubPrayer={toggleSubPrayer}
-                onToggleTahajjud={toggleTahajjud}
-              />
-            </BlurFade>
-          </div>
-
-          {/* Right Column - Progress and Stats (6 columns) */}
-          <div className="col-span-12 lg:col-span-6">
-            <BlurFade delay={0.25 * 2} inView>
-              <ProgressSection
-                getPrayerCompletion={getPrayerCompletion}
-                getTotalCompletion={getTotalCompletion}
-                last7Days={last7Days}
-                showJumma={showJumma}
-                isFriday={isFriday}
+      <div className="relative isolate min-h-screen">
+        {/* Background pattern with gradient fade */}
+        <div
+          className="pointer-events-none fixed inset-0 -z-10
+    [mask-image:radial-gradient(ellipse_at_center,rgba(0,0,0,0.03)_0%,rgba(0,0,0,0.08)_35%,rgba(0,0,0,0.25)_60%,black_100%)]
+    [-webkit-mask-image:radial-gradient(ellipse_at_center,rgba(0,0,0,0.03)_0%,rgba(0,0,0,0.08)_35%,rgba(0,0,0,0.25)_60%,black_100%)]"
+        >
+          <DotPattern className="h-full w-full" />
+        </div>
+        <div className="container mx-auto max-w-xl px-4 py-8 sm:px-6 lg:px-8 bg-background">
+          <BlurFade delay={0.25} inView>
+            <TodaysPrayers
+              madhab={madhab}
+              setMadhab={setMadhab}
+              cityName={cityName}
+              locationError={locationError}
+              progress={progress}
+              prayers={prayers}
+              currentPrayer={currentPrayer}
+              openAccordion={openAccordion}
+              subPrayers={subPrayers}
+              getPrayerCompletion={getPrayerCompletion}
+              isFarzChecked={isFarzChecked}
+              isBeforeFarz={isBeforeFarz}
+              onAccordionChange={handleAccordionChange}
+              onToggleSubPrayer={toggleSubPrayer}
+              onToggleTahajjud={toggleTahajjud}
             />
-            </BlurFade>
-          </div>
-          <div className="col-span-12 lg:col-span-12">
+          </BlurFade>
+
+          <ProgressSection
+            getPrayerCompletion={getPrayerCompletion}
+            getTotalCompletion={getTotalCompletion}
+            last7Days={last7Days}
+            showJumma={showJumma}
+            isFriday={isFriday}
+            delay={0.25}
+          />
+          {/* <div className="grid grid-cols-12 gap-8">
+          Left Column - Today's Prayers (6 columns)
+          <div className="col-span-12 lg:col-span-6"></div>
+
+          Right Column - Progress and Stats (6 columns)
+          <div className="col-span-12 lg:col-span-6"></div>
+        </div> */}
+          <div className="w-full" id="footer">
             <div className="mt-8 text-center">
               <p className="text-xs text-muted-foreground">
                 This feature is intended solely to help you track your prayers
@@ -1255,9 +1264,9 @@ export default function Home() {
                 Developed by{" "}
                 <a
                   href="https://abdullahminhas.github.io"
-            target="_blank"
+                  target="_blank"
                   className="text-primary underline"
-          >
+                >
                   Abdullah Minhas
                 </a>{" "}
                 ✨
@@ -1265,7 +1274,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-    </div>
+      </div>
     </>
   );
 }
